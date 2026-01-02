@@ -16,4 +16,5 @@ compile_commands.json
 .DS_STORE
 *.d
 *.red
+*.r
 trace
