@@ -50,22 +50,46 @@ typedef struct {
     int sequence;
 } parser_sm;
 
+#define MAX_PARSE_DEPTH 16
+
+parser_sm parser_stack[MAX_PARSE_DEPTH];
+int parser_depth;
+
 #define current_parser_rule(parser) language_rules[parser->current_rule].options[parser->option].rules[parser->sequence]
 
-void parser_advance_to_token(parser_sm *parser){
+bool parser_advance_to_token(parser_sm *parser){
     while (current_parser_rule(parser).rule){
         print("Rule %i has subrule %i",parser->current_rule, current_parser_rule(parser).value);
+        if (parser_depth == MAX_PARSE_DEPTH - 1){
+            print("Maximum depth reached, too many nested statements, shame on you");
+            return false;
+        }
+        printf("Push state");
+        parser_stack[parser_depth++] = *parser;
         parser->current_rule = current_parser_rule(parser).value;
         parser->sequence = 0;
         parser->option = 0;
     }
     print("Current rule %i. Option %i. Sequence %i",parser->current_rule, parser->option, parser->sequence);
+    return true;
+}
+
+bool pop_parser_stack(parser_sm *parser){
+    if (parser_depth == 0){
+        print("Cannot pop root state");
+        return false;
+    }
+    printf("Pop state");
+    *parser = parser_stack[parser_depth-1];
+    parser_depth--;
+    return true;
 }
 
 bool parser_advance_option_sm(parser_sm *parser){
     if (parser->option + 1 == language_rules[parser->current_rule].num_elements){
         printf("Ran out of options to parse rule %i. Failed",parser->current_rule);
-        return false;
+        if (!pop_parser_stack(parser)) return false;
+        return parser_advance_option_sm(parser);
     } else {
         parser->option++;
         parser->sequence = 0;
@@ -73,16 +97,22 @@ bool parser_advance_option_sm(parser_sm *parser){
     }
 }
 
+bool parser_advance_sequence(parser_sm *parser){
+    if (parser->sequence + 1 == language_rules[parser->current_rule].options[parser->option].num_elements){
+        print("Successfully parsed rule %i with option %i",parser->current_rule, parser->option);
+        if (!pop_parser_stack(parser)) return true;
+        return parser_advance_sequence(parser);
+    }
+    else parser->sequence++;
+    return true;
+}
+
 bool parse_token(char *content, Token t, parser_sm *parser){
     parser_advance_to_token(parser);
     grammar_elem element = current_parser_rule(parser);
     if (t.kind == element.value){
         print("Token %v [%i] = %i", delimited_stringview(content, t.pos, t.length), t.kind, element.value);
-        if (parser->sequence + 1 == language_rules[parser->current_rule].options[parser->option].num_elements){
-            print("Successfully parsed rule %i option %i",parser->current_rule,parser->option);
-        }
-        else parser->sequence++;
-        return true;
+        return parser_advance_sequence(parser);
     } else {
         print("Failed to match token %i, found %i. Skipping. There are %i options", element.value, t.kind,language_rules[parser->current_rule].num_elements);
         if (!parser_advance_option_sm(parser)) return false;
@@ -92,7 +122,7 @@ bool parse_token(char *content, Token t, parser_sm *parser){
 
 int main(int argc, char *argv[]){
     
-    char *content = "int a = 0;";//read_full_file("street.cred");
+    char *content = read_full_file("street.cred");
     
     Scanner scan = scanner_make(content,strlen(content));
     
