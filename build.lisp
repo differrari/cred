@@ -26,14 +26,14 @@
         "-DRULECODEGEN"
         "-DRULETRANSFORM"
     )
-) :add-dependencies t :run (not *beyond-lib*) :run-args (if-comp "languages/cred.rules" "languages/lisp.rules") :success (lambda () 
+) :add-dependencies t :run t :run-args (if-comp "languages/cred.rules" "languages/lisp.rules") :success (lambda () 
     (redbuild:quick-cred "semantic/sem_enum.cred" "semantic/semantic_rules")
     (redbuild:quick-cred "codegen/codegen.cred" "codegen/codegen")
     (redbuild:quick-build (make-instance `redbuild:redmod
         :name (exname)
         :type (extype)
         :target (redbuild:dyn-target)
-        :srcs (redbuild:all-sources-ignoring "c" (list "output.c" "build.c" (if-comp "lisp_test.c" "cred_main.c") (if-comp "interpreter/repl.c" nil) "ruleparser.c"))
+        :srcs (redbuild:all-sources-ignoring "c" (list "output.c" "build.c" (if-comp "imaginal.c" "cred_main.c") (if-comp "interpreter/repl.c" nil) "ruleparser.c"))
         :flags (list 
             "-DCCODEGEN"
             "-DCTRANS"

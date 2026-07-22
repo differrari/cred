@@ -6,6 +6,8 @@
 #include "ir/irgen.h"
 #include "ir/arch_transformer.h"
 #include "interpreter/repl.h"
+#define _GNU_SOURCE
+#include "memory/memory.h"
 
 static buffer buf;
 
@@ -34,19 +36,27 @@ bool parse_arguments(int argc, char *argv[]){
     return true;
 }
 
+extern buffer get_input_line();
+
 int main(int argc, char *argv[]) {
 
     if (!parse_arguments(argc, argv)) return -1;
+
+    imaginal_repl_ctx *im = zalloc(sizeof(imaginal_repl_ctx));
+    im->should_print = true;
+    im->fallback = 0;
     
-    codegen ir = parse_lisp(slice_from_buffer(&buf));
+    bool should_loop = false;
 
-    if (!ir.type || !ir.ptr) return -1;
-
-    // debug_print_ir(ir);
-
-    ir = perform_transformations(ir);
-
-    print("Final result");
-    imaginal_print(ir);
+    do {
+        should_loop = false;
+        repl_run(slice_from_buffer(&buf), im);
+        if (buf.buffer) buffer_destroy(&buf);
+        buf = get_input_line();
+        if (!buf.buffer || !buf.buffer_size || slice_lit_match(slice_from_buffer(&buf), "quit", true) || slice_lit_match(slice_from_buffer(&buf), "q", true) || slice_lit_match(slice_from_buffer(&buf), "exit", true)){
+            print("Imaginal close");
+            break;
+        } else should_loop = false;
+    } while (should_loop);
     
 }
