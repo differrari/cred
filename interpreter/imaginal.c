@@ -164,7 +164,7 @@ codegen apply(codegen fn_exp, codegen a, codegen *env){
             return cdr(a);
         }
         else if (slice_lit_match(s, "cons", true)){
-            return a;
+            return cons(car(a), car(cdr(a)));
         }
         else if (slice_lit_match(s, "atom", true)){
             s_exp_code *arg = a.ptr;
