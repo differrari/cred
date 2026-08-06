@@ -256,9 +256,10 @@ codegen rule_entry_code_init();
 // MARK: Lisp code
 
 typedef struct {
-    enum { car_none, car_identifier, car_string, car_num, car_true } type;
+    enum { car_none, car_identifier, car_string, car_int, car_flo, car_true } type;
     string_slice val;
-    int number;
+    i64 integer;
+    double floating;
 } atom_code;
 
 codegen atom_code_init();

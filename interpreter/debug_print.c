@@ -13,8 +13,11 @@ void atom_code_debug_print(codegen instance, int depth){
         case car_string:
             buffer_write(&imaginal_buf,"%v ",car->val);
             break;
-        case car_num:
-            buffer_write(&imaginal_buf,"%i ",car->number);
+        case car_int:
+            buffer_write(&imaginal_buf,"%lli ",car->integer);
+            break;
+        case car_flo:
+            buffer_write(&imaginal_buf,"%f ",car->floating);
             break;
         case car_true:
             buffer_write(&imaginal_buf,"t ");

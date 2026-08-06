@@ -1,6 +1,7 @@
 #include "imaginal.h"
 #include "syscalls/syscalls.h"
 #include "ir/manual_gen.h"
+#include "math/math.h"
 
 // #define IMAGINAL_DEBUG
 #ifdef IMAGINAL_DEBUG
@@ -50,19 +51,56 @@ static inline codegen last(codegen exp){
     return car(exp);
 }
 
+codegen imaginal_builtin_mathf(codegen exp, imaginal_math op){
+    print("FMATH");
+    s_exp_code *code = exp.ptr;
+    if (!code) { print("[MATH error] Add null ptr"); return nil_exp; }
+    atom_code *car_val = code->car.ptr;
+    if (!code->car.ptr) { print("[MATH error] null car"); return nil_exp; }
+    double a = 0;
+    double b = 0;
+    if (car_val->type == car_int) a = (double)car_val->integer;
+    else if (car_val->type != car_flo) { print("[MATH error] non-numeric lh"); imaginal_print(code->car); return nil_exp; }
+    else a = car_val->floating;
+    s_exp_code *cdr = code->cdr.ptr;
+    if (cdr){
+        atom_code *cdr_val = (code->cdr.type == sem_rule_atom) ? code->cdr.ptr : ((s_exp_code*)code->cdr.ptr)->car.ptr;
+        if (cdr_val->type == car_int) b = (double)cdr_val->integer;
+        else if (cdr_val->type != car_flo) { print("[MATH error] non-numeric rh"); imaginal_print(code->cdr); return nil_exp; }
+        else b = cdr_val->floating;
+    }
+    print("%f %f",a,b);
+    switch (op) {
+        case imaginal_add: imaginal_debug("[ADD trace] %f + %f = %f",a,b,a+b); return make_flo_atom(a+b);
+        case imaginal_sub: imaginal_debug("[SUB trace] %f - %f = %f",a,b,a-b); return make_flo_atom(a-b);
+        case imaginal_mul: imaginal_debug("[MUL trace] %f * %f = %f",a,b,a*b); return make_flo_atom(a*b);
+        case imaginal_div: {
+            if (b == 0){
+                print("[DIV error] divide by 0");
+                return nil_exp;
+            }
+            imaginal_debug("[DIV trace] %f/%f = %f",a,b,a/b);
+            return make_flo_atom(a/b);
+        } 
+    }
+}
+
 codegen imaginal_builtin_math(codegen exp, imaginal_math op){
     s_exp_code *code = exp.ptr;
     if (!code) { print("[MATH error] Add null ptr"); return nil_exp; }
     atom_code *car_val = code->car.ptr;
     if (!code->car.ptr) { print("[MATH error] null car"); return nil_exp; }
-    if (car_val->type != car_num) { print("[MATH error] non-numeric lh"); imaginal_print(code->car); return nil_exp; }
-    i64 a = car_val->number;
+    i64 a = 0;
     i64 b = 0;
+    if (car_val->type == car_flo) return imaginal_builtin_mathf(exp, op);
+    else if (car_val->type != car_int) { print("[MATH error] non-numeric lh"); imaginal_print(code->car); return nil_exp; }
+    else a = car_val->integer;
     s_exp_code *cdr = code->cdr.ptr;
     if (cdr){
         atom_code *cdr_val = (code->cdr.type == sem_rule_atom) ? code->cdr.ptr : ((s_exp_code*)code->cdr.ptr)->car.ptr;
-        if (cdr_val->type != car_num) { print("[MATH error] non-numeric rh"); imaginal_print(code->cdr); return nil_exp; }
-        b = cdr_val->number;
+        if (cdr_val->type == car_flo) return imaginal_builtin_mathf(exp, op);
+        if (cdr_val->type != car_int) { print("[MATH error] non-numeric rh"); imaginal_print(code->cdr); return nil_exp; }
+        else b = cdr_val->integer;
     }
     switch (op) {
         case imaginal_add: imaginal_debug("[ADD trace] %i + %i = %i",a,b,a+b); return make_int_atom(a+b);
@@ -90,8 +128,10 @@ bool equality_atom(codegen a, codegen b){
         case car_identifier:
         case car_string:
             return slices_equal(acode->val, bcode->val, true);
-        case car_num:
-            return acode->number == bcode->number;
+        case car_flo:
+            return absd(acode->floating - bcode->floating) < 0.001f;
+        case car_int:
+            return acode->integer == bcode->integer;
         case car_true:
             return true;
       break;
@@ -245,7 +285,8 @@ codegen copy_val(codegen a){
             codegen atom = atom_code_init();
             atom_code *new = atom.ptr;
             atom_code *old = a.ptr;
-            new->number = old->number;
+            new->integer = old->integer;
+            new->floating = old->floating;
             new->type = old->type;
             new->val = old->val;
             return atom;

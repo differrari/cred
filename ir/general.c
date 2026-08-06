@@ -487,8 +487,13 @@ void atom_code_register_elem(codegen instance, int type, Token elem){
     atom_code *code = (atom_code*)instance.ptr;
     switch (elem.kind){
         case TOK_NUMBER: 
-            code->number = parse_int64(elem.start, elem.length);
-            code->type = car_num;
+            if (slice_index(token_to_slice(elem), ".") >= 0 || slice_index(token_to_slice(elem), "f") >= 0){
+                code->floating = parse_double((char*)elem.start, elem.length);
+                code->type = car_flo;
+            } else {
+                code->integer = parse_int64(elem.start, elem.length);
+                code->type = car_int;
+            }
         break;
         case TOK_IDENTIFIER: 
             if (slice_lit_match(token_to_slice(elem), "t", true))

@@ -245,8 +245,16 @@ codegen make_id_atom(string_slice sl){
 codegen make_int_atom(i64 a){
     codegen s = atom_code_init();
     atom_code *code = s.ptr;
-    code->number = a;
-    code->type = car_num;
+    code->integer = a;
+    code->type = car_int;
+    return s;
+}
+
+codegen make_flo_atom(double a){
+    codegen s = atom_code_init();
+    atom_code *code = s.ptr;
+    code->floating = a;
+    code->type = car_flo;
     return s;
 }
 

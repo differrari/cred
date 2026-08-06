@@ -31,6 +31,7 @@ codegen make_rule(string_slice name,  string_slice tag, bool declaration, codege
 codegen make_rule_sequence(string_slice name, string_slice value, string_slice type, string_slice tag, bool optional, codegen existing);
 codegen make_id_atom(string_slice sl);
 codegen make_int_atom(i64 a);
+codegen make_flo_atom(double a);
 codegen make_true_atom();
 codegen make_list(codegen single);
 codegen make_lambda(codegen contents);
