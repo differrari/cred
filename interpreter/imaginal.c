@@ -227,7 +227,7 @@ codegen apply(codegen fn_exp, codegen a, codegen *env){
             codegen exp = eval(fn_exp, env);
             if (is_nil(exp)){
                 if (imaginal_fallback_fncall){
-                    return imaginal_fallback_fncall(fn_exp, evlis(a, env), env);
+                    return imaginal_fallback_fncall(fn_exp, a, env);
                 }
                 print("[APPLY error]: function not found %v",s);
                 return nil_exp;
@@ -341,6 +341,10 @@ codegen eval(codegen exp, codegen *env){
         else if (slice_lit_match(s, "quote", true)){
             return car(cdr(exp));
         } 
+        else if (slice_lit_match(s, "list", true)){
+            imaginal_debug("[EVAL trace] list");
+            return evlis(code->cdr, env);
+        }
         else if (slice_lit_match(s, "var", true) || slice_lit_match(s, "const", true)){
             codegen name = car(cdr(exp));
             if (slice_lit_match(s, "const", true) && assoc(name, *env).ptr) return nil_exp;
@@ -363,8 +367,7 @@ codegen eval(codegen exp, codegen *env){
             codegen body = cdr(cdr(exp));
             codegen ret = evlis(body, &local);
             return last(ret);
-        }
-        else {
+        } else {
             return apply(code->car, evlis(code->cdr, env), env);
         }
     } 
