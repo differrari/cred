@@ -4,8 +4,8 @@
 
 extern buffer imaginal_buf;
 
-void lisp_val_code_debug_print(codegen instance, int depth){
-    lisp_val_code *car = instance.ptr;
+void atom_code_debug_print(codegen instance, int depth){
+    atom_code *car = instance.ptr;
     switch (car->type) {
         case car_identifier:
             buffer_write(&imaginal_buf,"%v ",car->val);

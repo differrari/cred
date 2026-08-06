@@ -44,7 +44,7 @@ grammar_rule language_rules[num_grammar_rules] = {
 		{{ 
 			SYMCHECK(NUMBER,val), 
 		 },1},
-	},3, sem_rule_lisp_val, sem_action_none},
+	},3, sem_rule_atom, sem_action_none},
 };
 
 char* rule_names[num_grammar_rules] = {

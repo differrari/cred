@@ -102,7 +102,7 @@ codegen s_exp_code_transform(codegen instance){
     return instance;
 }
 
-codegen lisp_val_code_transform(codegen instance){
+codegen atom_code_transform(codegen instance){
     return instance;
 }
 

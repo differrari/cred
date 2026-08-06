@@ -45,7 +45,7 @@ char* sem_rule_strings[] = {
 	[sem_rule_rule_sequence] = "rule_sequence",
 	[sem_rule_rule_entry] = "rule_entry",
 	[sem_rule_sexp] = "sexp",
-	[sem_rule_lisp_val] = "lisp_val",
+	[sem_rule_atom] = "atom",
 };
 sem_rule sem_rule_from_string(char * val){
 	if (!strcmp("none", val)){
@@ -132,8 +132,8 @@ sem_rule sem_rule_from_string(char * val){
 		return sem_rule_rule_entry;
 	} else if (!strcmp("sexp", val)){
 		return sem_rule_sexp;
-	} else if (!strcmp("lisp_val", val)){
-		return sem_rule_lisp_val;
+	} else if (!strcmp("atom", val)){
+		return sem_rule_atom;
 	}return 0;
 }
 

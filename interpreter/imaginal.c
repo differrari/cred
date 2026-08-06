@@ -24,8 +24,8 @@ bool is_true(codegen exp){
             s_exp_code *scode = exp.ptr;
             return is_true(scode->car);
         }
-        case sem_rule_lisp_val: {
-            lisp_val_code *lcode = exp.ptr;
+        case sem_rule_atom: {
+            atom_code *lcode = exp.ptr;
             return lcode->type == car_true;
         }
         default: return false;
@@ -53,14 +53,14 @@ static inline codegen last(codegen exp){
 codegen imaginal_builtin_math(codegen exp, imaginal_math op){
     s_exp_code *code = exp.ptr;
     if (!code) { print("[MATH error] Add null ptr"); return nil_exp; }
-    lisp_val_code *car_val = code->car.ptr;
+    atom_code *car_val = code->car.ptr;
     if (!code->car.ptr) { print("[MATH error] null car"); return nil_exp; }
     if (car_val->type != car_num) { print("[MATH error] non-numeric lh"); imaginal_print(code->car); return nil_exp; }
     i64 a = car_val->number;
     i64 b = 0;
     s_exp_code *cdr = code->cdr.ptr;
     if (cdr){
-        lisp_val_code *cdr_val = (code->cdr.type == sem_rule_lisp_val) ? code->cdr.ptr : ((s_exp_code*)code->cdr.ptr)->car.ptr;
+        atom_code *cdr_val = (code->cdr.type == sem_rule_atom) ? code->cdr.ptr : ((s_exp_code*)code->cdr.ptr)->car.ptr;
         if (cdr_val->type != car_num) { print("[MATH error] non-numeric rh"); imaginal_print(code->cdr); return nil_exp; }
         b = cdr_val->number;
     }
@@ -80,9 +80,9 @@ codegen imaginal_builtin_math(codegen exp, imaginal_math op){
 }
 
 bool equality_atom(codegen a, codegen b){
-    if (a.type != b.type || a.type != sem_rule_lisp_val) return false;
-    lisp_val_code *acode = a.ptr;
-    lisp_val_code *bcode = b.ptr;
+    if (a.type != b.type || a.type != sem_rule_atom) return false;
+    atom_code *acode = a.ptr;
+    atom_code *bcode = b.ptr;
     if (acode->type != bcode->type) return false;
     switch (acode->type) {
         case car_none:
@@ -240,11 +240,11 @@ codegen copy_val(codegen a){
             ns->cdr = copy_val(os->cdr);
             return s;
         }
-        case sem_rule_lisp_val:
+        case sem_rule_atom:
         {
-            codegen atom = lisp_val_code_init();
-            lisp_val_code *new = atom.ptr;
-            lisp_val_code *old = a.ptr;
+            codegen atom = atom_code_init();
+            atom_code *new = atom.ptr;
+            atom_code *old = a.ptr;
             new->number = old->number;
             new->type = old->type;
             new->val = old->val;
@@ -282,7 +282,7 @@ codegen assoc(codegen x, codegen a){
 codegen eval(codegen exp, codegen *env){
     if (!exp.ptr) { print("[EVAL error] null ptr"); return nil_exp; }
     if (is_atom(exp)){
-        lisp_val_code *code = exp.ptr;
+        atom_code *code = exp.ptr;
         imaginal_debug("[EVAL trace] Atomic expression");
         if (code->type == car_identifier){
             return assoc(exp, *env);

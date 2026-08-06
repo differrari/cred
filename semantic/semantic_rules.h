@@ -43,7 +43,7 @@ typedef enum {
 	sem_rule_rule_sequence,
 	sem_rule_rule_entry,
 	sem_rule_sexp,
-	sem_rule_lisp_val,
+	sem_rule_atom,
 } sem_rule;
 
 extern char* sem_rule_strings[];

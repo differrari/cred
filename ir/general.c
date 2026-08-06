@@ -483,8 +483,8 @@ CODEGEN_DEC(rule_entry_code, sem_rule_rule_entry, 0, 0);
 
 #include "syscalls/syscalls.h"
 
-void lisp_val_code_register_elem(codegen instance, int type, Token elem){
-    lisp_val_code *code = (lisp_val_code*)instance.ptr;
+void atom_code_register_elem(codegen instance, int type, Token elem){
+    atom_code *code = (atom_code*)instance.ptr;
     switch (elem.kind){
         case TOK_NUMBER: 
             code->number = parse_int64(elem.start, elem.length);
@@ -508,15 +508,15 @@ void lisp_val_code_register_elem(codegen instance, int type, Token elem){
     }
 }
 
-void lisp_val_code_register_subrule(codegen instance, int type, codegen child){
+void atom_code_register_subrule(codegen instance, int type, codegen child){
     
 }
 
 #ifdef RULECODEGEN
-CODEGEN_DEC(lisp_val_code, sem_rule_lisp_val, 0, 0);
+CODEGEN_DEC(atom_code, sem_rule_atom, 0, 0);
 #else
-extern void lisp_val_code_debug_print(codegen instance, int depth);
-CODEGEN_DEC(lisp_val_code, sem_rule_lisp_val, 0, lisp_val_code_debug_print);
+extern void atom_code_debug_print(codegen instance, int depth);
+CODEGEN_DEC(atom_code, sem_rule_atom, 0, atom_code_debug_print);
 #endif
 
 void s_exp_code_register_elem(codegen instance, int type, Token elem){

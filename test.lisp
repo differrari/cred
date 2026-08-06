@@ -1,6 +1,6 @@
 (var a 6)
-(var a 7)
-; a is 7
+(var a -7)
+; a is -7
 
 ((label fibl (lambda (n)
     (cond

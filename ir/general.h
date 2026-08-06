@@ -259,9 +259,9 @@ typedef struct {
     enum { car_none, car_identifier, car_string, car_num, car_true } type;
     string_slice val;
     int number;
-} lisp_val_code;
+} atom_code;
 
-codegen lisp_val_code_init();
+codegen atom_code_init();
 
 typedef struct {
     codegen car;

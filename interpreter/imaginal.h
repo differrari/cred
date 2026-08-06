@@ -12,7 +12,7 @@ typedef codegen (*imaginal_fallback)(codegen fn_exp, codegen a, codegen *env);
 extern imaginal_fallback imaginal_fallback_fncall;
 
 static inline bool is_atom(codegen exp){
-    return exp.type == sem_rule_lisp_val;
+    return exp.type == sem_rule_atom;
 } 
 
 static inline codegen car(codegen a){
@@ -38,8 +38,8 @@ static inline codegen cons(codegen a, codegen b){
 }
 
 static inline string_slice car_id(codegen car){
-    if (car.type != sem_rule_lisp_val) return (string_slice){};
-    lisp_val_code *code = car.ptr;
+    if (car.type != sem_rule_atom) return (string_slice){};
+    atom_code *code = car.ptr;
     if (code->type != car_identifier) return (string_slice){};
     return code->val;
 }

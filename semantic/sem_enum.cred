@@ -41,7 +41,7 @@ enum sem_rule {
     rule_sequence,
     rule_entry,
     sexp,
-    lisp_val,
+    atom,
 }
 
 enum sem_elem { 

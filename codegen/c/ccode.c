@@ -495,7 +495,7 @@ bool s_exp_code_emit_code(codegen instance){
     return false;
 }
 
-bool lisp_val_code_emit_code(codegen instance, codegen this){
+bool atom_code_emit_code(codegen instance, codegen this){
     return false;
 }
 

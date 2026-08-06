@@ -2,4 +2,4 @@ chain -> exp chain?;
 exp  -> sexp | atom;
 sexp@sexp -> LPAREN args? RPAREN;
 args -> exp args?;
-atom@lisp_val -> IDENTIFIER@val | STRING@val | NUMBER@val;
+atom@atom -> IDENTIFIER@val | STRING@val | NUMBER@val;
