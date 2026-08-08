@@ -175,7 +175,7 @@ codegen eval_list(codegen l, bool last, int depth, codegen *env){
         return c;
     }
     imaginal_debug(trace,"[S_EXP trace] done");
-    return n;
+    return last ? ncode->cdr : n;
 }
 
 codegen evlis(codegen l, codegen *env){
@@ -234,10 +234,6 @@ codegen apply(codegen fn_exp, codegen a, codegen *env){
         imaginal_debug(trace,"[APPLY trace] Atomic expression %v",s);
         if (!s.length) { print("[APPLY error] Wrong expression type"); return (codegen){}; }
         if (slice_lit_match(s, "car", true)){
-            print(">>CAR of:");
-            imaginal_print(a);
-            print("IS:");
-            imaginal_print(car(a));
             return car(a);
         }
         else if (slice_lit_match(s, "cdr", true)){
