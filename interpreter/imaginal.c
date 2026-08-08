@@ -3,12 +3,11 @@
 #include "ir/manual_gen.h"
 #include "math/math.h"
 
-// #define IMAGINAL_DEBUG
-#ifdef IMAGINAL_DEBUG
-#define imaginal_debug(...) print(__VA_ARGS__)
-#else
-#define imaginal_debug(...)
-#endif
+enum { imaginal_log_error, imaginal_log_trace, imaginal_log_debug } imaginal_log_level;
+
+#define imaginal_debug(LEVEL, ...)\
+    if (imaginal_log_##LEVEL <= imaginal_log_level)\
+        print(__VA_ARGS__);
 
 buffer imaginal_buf;
 
@@ -43,14 +42,6 @@ static inline bool is_nil(codegen m){
 
 typedef enum { imaginal_add, imaginal_sub, imaginal_mul, imaginal_div } imaginal_math;
 
-static inline codegen last(codegen exp){
-    codegen ecdr = cdr(exp);
-    if (ecdr.ptr){
-        return last(ecdr);
-    }
-    return car(exp);
-}
-
 codegen imaginal_builtin_mathf(codegen exp, imaginal_math op){
     print("FMATH");
     s_exp_code *code = exp.ptr;
@@ -71,15 +62,15 @@ codegen imaginal_builtin_mathf(codegen exp, imaginal_math op){
     }
     print("%f %f",a,b);
     switch (op) {
-        case imaginal_add: imaginal_debug("[ADD trace] %f + %f = %f",a,b,a+b); return make_flo_atom(a+b);
-        case imaginal_sub: imaginal_debug("[SUB trace] %f - %f = %f",a,b,a-b); return make_flo_atom(a-b);
-        case imaginal_mul: imaginal_debug("[MUL trace] %f * %f = %f",a,b,a*b); return make_flo_atom(a*b);
+        case imaginal_add: imaginal_debug(trace,"[ADD trace] %f + %f = %f",a,b,a+b); return make_flo_atom(a+b);
+        case imaginal_sub: imaginal_debug(trace,"[SUB trace] %f - %f = %f",a,b,a-b); return make_flo_atom(a-b);
+        case imaginal_mul: imaginal_debug(trace,"[MUL trace] %f * %f = %f",a,b,a*b); return make_flo_atom(a*b);
         case imaginal_div: {
             if (b == 0){
                 print("[DIV error] divide by 0");
                 return nil_exp;
             }
-            imaginal_debug("[DIV trace] %f/%f = %f",a,b,a/b);
+            imaginal_debug(trace,"[DIV trace] %f/%f = %f",a,b,a/b);
             return make_flo_atom(a/b);
         } 
     }
@@ -103,15 +94,15 @@ codegen imaginal_builtin_math(codegen exp, imaginal_math op){
         else b = cdr_val->integer;
     }
     switch (op) {
-        case imaginal_add: imaginal_debug("[ADD trace] %i + %i = %i",a,b,a+b); return make_int_atom(a+b);
-        case imaginal_sub: imaginal_debug("[SUB trace] %i - %i = %i",a,b,a-b); return make_int_atom(a-b);
-        case imaginal_mul: imaginal_debug("[MUL trace] %i * %i = %i",a,b,a*b); return make_int_atom(a*b);
+        case imaginal_add: imaginal_debug(trace, "[ADD trace] %i + %i = %i",a,b,a+b); return make_int_atom(a+b);
+        case imaginal_sub: imaginal_debug(trace, "[SUB trace] %i - %i = %i",a,b,a-b); return make_int_atom(a-b);
+        case imaginal_mul: imaginal_debug(trace, "[MUL trace] %i * %i = %i",a,b,a*b); return make_int_atom(a*b);
         case imaginal_div: {
             if (b == 0){
                 print("[DIV error] divide by 0");
                 return nil_exp;
             }
-            imaginal_debug("[DIV trace] %i/%i = %i",a,b,a/b);
+            imaginal_debug(trace,"[DIV trace] %i/%i = %i",a,b,a/b);
             return make_int_atom(a/b);
         } 
     }
@@ -165,18 +156,30 @@ codegen letvars(codegen x, codegen env){
     );
 }
 
-codegen evlis(codegen l, codegen *env){
-    imaginal_debug("[S_EXP trace] transform");
+// evlis[m;a] = [null[m] → NIL;
+//              T → cons[eval[car[m];a];evlis[cdr[m];a]]]
+
+codegen eval_list(codegen l, bool last, int depth, codegen *env){
+    imaginal_debug(trace,"[S_EXP trace] transform");
     if (is_nil(l)) return nil_exp;
     s_exp_code *code = l.ptr;
     codegen local = *env;
     codegen n = s_exp_code_init();
     s_exp_code *ncode = n.ptr;
     ncode->car = eval(code->car, &local);
-    imaginal_debug("[S_EXP trace] next");
-    if (code->cdr.ptr) ncode->cdr = evlis(code->cdr, &local);
-    imaginal_debug("[S_EXP trace] done");
+    imaginal_debug(trace,"[S_EXP trace] next");
+    if (code->cdr.ptr) ncode->cdr = eval_list(code->cdr, last, depth+1, &local);
+    else if (last || depth == 0) {
+        codegen c = ncode->car;
+        release(ncode);
+        return c;
+    }
+    imaginal_debug(trace,"[S_EXP trace] done");
     return n;
+}
+
+codegen evlis(codegen l, codegen *env){
+    return eval_list(l, false, 0, env);
 }
 
 // apply[fn;x;a] =
@@ -189,15 +192,52 @@ codegen evlis(codegen l, codegen *env){
 //      eq[car[fn];LAMBDA] → eval[caddr[fn]; pairlis[cadr[fn];x;a]];
 //      eq[car[fn];LABEL] → apply[caddr[fn];x;cons[cons[cadr[fn];caddr[fn]];a]]]
 
+codegen imaginal_debugger_options(string_slice s, codegen a, codegen *env){
+    if (slice_lit_match(s, "halt", true)){
+        halt(0);
+    }
+    if (slice_lit_match(s, "printenv", true)){
+        print("Environment:");
+        imaginal_print(*env);
+        print("============");
+    }
+    if (slice_lit_match(s, "print",true)){
+        imaginal_print(a);
+        return a;
+    }
+    if (slice_lit_match(s, "trace",true)){
+        string_slice lvl = car_get_string(car(a));
+        print("LEVEL |%v|",lvl);
+        if (slice_lit_match(lvl, "error", true)){
+            imaginal_log_level = imaginal_log_error;
+            print("Set log level >>>> %i",imaginal_log_level);
+        }
+        if (slice_lit_match(lvl, "trace", true)){
+            imaginal_log_level = imaginal_log_trace;
+            print("Set log level >>>> %i",imaginal_log_level);
+        }
+        if (slice_lit_match(lvl, "debug", true)){
+            imaginal_log_level = imaginal_log_debug;
+            print("Set log level >>>> %i",imaginal_log_level);
+        }
+    }
+    return nil_exp;
+}
+
 extern codegen (*imaginal_fallback_fncall)(codegen fn_exp, codegen a, codegen *env);
 
 codegen apply(codegen fn_exp, codegen a, codegen *env){
+    imaginal_debug(trace,"[APPLY] begin");
     if (!fn_exp.ptr) { print("[APPLY error] Apply null ptr"); return (codegen){}; }
     if (is_atom(fn_exp)){
         string_slice s = car_id(fn_exp);
-        imaginal_debug("[APPLY trace] Atomic expression %v",s);
+        imaginal_debug(trace,"[APPLY trace] Atomic expression %v",s);
         if (!s.length) { print("[APPLY error] Wrong expression type"); return (codegen){}; }
         if (slice_lit_match(s, "car", true)){
+            print(">>CAR of:");
+            imaginal_print(a);
+            print("IS:");
+            imaginal_print(car(a));
             return car(a);
         }
         else if (slice_lit_match(s, "cdr", true)){
@@ -224,6 +264,8 @@ codegen apply(codegen fn_exp, codegen a, codegen *env){
         } else if (slice_lit_match(s, "div", true)){
             return imaginal_builtin_math(a,imaginal_div);
         } else {
+            codegen deb = imaginal_debugger_options(s,a,env);
+            if (deb.ptr) return deb;
             codegen exp = eval(fn_exp, env);
             if (is_nil(exp)){
                 if (imaginal_fallback_fncall){
@@ -239,11 +281,11 @@ codegen apply(codegen fn_exp, codegen a, codegen *env){
         codegen c = car(fn_exp);
         if (!is_atom(c)) { print("[APPLY error] no atomic expression in sub-expression"); return (codegen){}; }
         string_slice s = car_id(c);
-        imaginal_debug("[APPLY trace] Non-atomic expression %v",s);
+        imaginal_debug(trace,"[APPLY trace] Non-atomic expression %v",s);
         if (!s.length) return (codegen){};
         if (slice_lit_match(s, "lambda", true)){
             codegen local = pairlis(car(cdr(fn_exp)),a,*env);
-            return last(evlis(cdr(cdr(fn_exp)), &local));
+            return eval_list(cdr(cdr(fn_exp)), true, 0, &local);
         }
         if (slice_lit_match(s, "label", true)){
             codegen local = cons(
@@ -298,12 +340,12 @@ codegen copy_val(codegen a){
 // assoc[x;a] = [equal[caar[a];x]→car[a]; T → assoc[x;cdr[a]]]
 
 codegen assoc(codegen x, codegen a){
-    imaginal_debug("[EVAL trace] assoc");
+    imaginal_debug(trace,"[EVAL trace] assoc");
     if (is_nil(a)) {
-#ifdef IMAGINAL_DEBUG
-    print("[ASSOC error] Symbol not found:");
-    imaginal_print(x);
-#endif
+        if (imaginal_log_level >= imaginal_log_trace){
+            print("[ASSOC error] Symbol not found:");
+            imaginal_print(x);
+        }
         return nil_exp;
     }
     if (equality_atom(car(car(a)), x)){
@@ -321,10 +363,11 @@ codegen assoc(codegen x, codegen a){
     //  T → apply[car[e];evlis[cdr[e];a];a]]
 
 codegen eval(codegen exp, codegen *env){
+    imaginal_debug(trace,"[EVAL] begin");
     if (!exp.ptr) { print("[EVAL error] null ptr"); return nil_exp; }
     if (is_atom(exp)){
         atom_code *code = exp.ptr;
-        imaginal_debug("[EVAL trace] Atomic expression");
+        imaginal_debug(trace,"[EVAL trace] Atomic expression");
         if (code->type == car_identifier){
             return assoc(exp, *env);
         }
@@ -333,17 +376,16 @@ codegen eval(codegen exp, codegen *env){
     s_exp_code *code = exp.ptr;
     if (is_atom(code->car)){
         string_slice s = car_id(code->car);
-        imaginal_debug("[EVAL trace] Atomic car expression %v",s);
+        imaginal_debug(trace,"[EVAL trace] Atomic car expression %v",s);
         if (slice_lit_match(s, "cond", true)){
-            imaginal_debug("[EVAL todo] Handle cond case");
             return evcon(code->cdr, *env);
         }
         else if (slice_lit_match(s, "quote", true)){
             return car(cdr(exp));
         } 
         else if (slice_lit_match(s, "list", true)){
-            imaginal_debug("[EVAL trace] list");
-            return evlis(code->cdr, env);
+            imaginal_debug(trace,"[EVAL trace] list");
+            return make_list(evlis(code->cdr, env));
         }
         else if (slice_lit_match(s, "var", true) || slice_lit_match(s, "const", true)){
             codegen name = car(cdr(exp));
@@ -365,14 +407,13 @@ codegen eval(codegen exp, codegen *env){
         } else if (slice_lit_match(s, "let", true)){
             codegen local = letvars(car(cdr(exp)), *env);
             codegen body = cdr(cdr(exp));
-            codegen ret = evlis(body, &local);
-            return last(ret);
+            return eval_list(body, true, 0, &local);
         } else {
             return apply(code->car, evlis(code->cdr, env), env);
         }
     } 
     else {
-        imaginal_debug("[EVAL trace] non-atomic expression");
+        imaginal_debug(trace,"[EVAL trace] non-atomic expression");
         return apply(code->car, evlis(code->cdr, env), env);
     }
 }
