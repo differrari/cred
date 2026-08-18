@@ -37,9 +37,14 @@ size_t tree_count(chunk_array_t *stack){
 
 void tree_reset(chunk_array_t *tree, size_t to){
     if (tree->chunk_capacity <= to){
+        if (tree->next){
+            tree_reset(tree->next,to-tree->chunk_capacity);
+        }
+    } else {
+        tree->count = to;
         if (tree->next)
-            tree_reset(tree->next,to-tree->count);
-    } else tree->count = to;
+            tree_reset(tree->next,0);
+    }
 }
 
 void print_stack(chunk_array_t *stack){

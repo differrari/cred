@@ -26,6 +26,7 @@ static inline codegen cdr(codegen a){
     if (a.type != sem_rule_sexp) return nil_exp;
     if (is_atom(a)) return nil_exp;
     s_exp_code *arg = a.ptr;
+    if (!arg) return nil_exp;
     return arg->cdr;
 }
 
@@ -37,14 +38,14 @@ static inline codegen cons(codegen a, codegen b){
     return news;
 }
 
-static inline string_slice car_id(codegen car){
+static inline string_slice car_id(codegen car){//TODO: this function does not take an expression to produce its car as the specific type, it takes the car directly, it's inconsistent with other functions
     if (car.type != sem_rule_atom) return (string_slice){};
     atom_code *code = car.ptr;
     if (code->type != car_identifier) return (string_slice){};
     return code->val;
 }
 
-static inline string_slice car_get_string(codegen car){
+static inline string_slice car_get_string(codegen car){//TODO: this function does not take an expression to produce its car as the specific type, it takes the car directly, it's inconsistent with other functions
     if (car.type != sem_rule_atom) return (string_slice){};
     atom_code *code = car.ptr;
     if (code->type != car_string) return (string_slice){};
@@ -74,6 +75,5 @@ static inline double car_double(codegen exp){
 codegen apply(codegen fn_exp, codegen a, codegen *env);
 codegen eval(codegen exp, codegen *env);
 codegen evlis(codegen l, codegen *env);
-bool is_atom(codegen exp);
 
 void imaginal_print(codegen exp);

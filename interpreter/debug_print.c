@@ -22,7 +22,7 @@ void atom_code_debug_print(codegen instance, int depth){
         case car_true:
             buffer_write(&imaginal_buf,"t ");
             break;
-        default: print("{err wrong type %i}",car->type);
+        default: buffer_write(&imaginal_buf, "{err wrong type %i}",car->type);
     }
 }
 

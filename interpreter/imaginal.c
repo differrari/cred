@@ -15,7 +15,7 @@ void imaginal_print(codegen exp){
     if (!imaginal_buf.buffer) imaginal_buf = buffer_create(0x1000, buffer_can_grow);
     buffer_wipe(&imaginal_buf);
     codegen_debug_print(exp, 0);
-    print("%v",slice_from_buffer(&imaginal_buf));
+    printl(slice_from_buffer(&imaginal_buf).data);
 }
 
 bool is_true(codegen exp){
@@ -56,9 +56,11 @@ codegen imaginal_builtin_mathf(codegen exp, imaginal_math op){
     s_exp_code *cdr = code->cdr.ptr;
     if (cdr){
         atom_code *cdr_val = (code->cdr.type == sem_rule_atom) ? code->cdr.ptr : ((s_exp_code*)code->cdr.ptr)->car.ptr;
-        if (cdr_val->type == car_int) b = (double)cdr_val->integer;
-        else if (cdr_val->type != car_flo) { print("[MATH error] non-numeric rh"); imaginal_print(code->cdr); return nil_exp; }
-        else b = cdr_val->floating;
+        if (cdr_val){
+            if (cdr_val->type == car_int) b = (double)cdr_val->integer;
+            else if (cdr_val->type != car_flo) { print("[MATH error] non-numeric rh"); imaginal_print(code->cdr); return nil_exp; }
+            else b = cdr_val->floating;
+        }
     }
     print("%f %f",a,b);
     switch (op) {
@@ -89,9 +91,11 @@ codegen imaginal_builtin_math(codegen exp, imaginal_math op){
     s_exp_code *cdr = code->cdr.ptr;
     if (cdr){
         atom_code *cdr_val = (code->cdr.type == sem_rule_atom) ? code->cdr.ptr : ((s_exp_code*)code->cdr.ptr)->car.ptr;
-        if (cdr_val->type == car_flo) return imaginal_builtin_mathf(exp, op);
-        if (cdr_val->type != car_int) { print("[MATH error] non-numeric rh"); imaginal_print(code->cdr); return nil_exp; }
-        else b = cdr_val->integer;
+        if (cdr_val){
+            if (cdr_val && cdr_val->type == car_flo) return imaginal_builtin_mathf(exp, op);
+            if (cdr_val && cdr_val->type != car_int) { print("[MATH error] non-numeric rh"); imaginal_print(code->cdr); return nil_exp; }
+            else b = cdr_val->integer;
+        }
     }
     switch (op) {
         case imaginal_add: imaginal_debug(trace, "[ADD trace] %i + %i = %i",a,b,a+b); return make_int_atom(a+b);
@@ -232,7 +236,7 @@ codegen apply(codegen fn_exp, codegen a, codegen *env){
     if (is_atom(fn_exp)){
         string_slice s = car_id(fn_exp);
         imaginal_debug(trace,"[APPLY trace] Atomic expression %v",s);
-        if (!s.length) { print("[APPLY error] Wrong expression type"); return (codegen){}; }
+        if (!s.length) { print("[APPLY error] Wrong expression type"); imaginal_print(fn_exp); return (codegen){}; }
         if (slice_lit_match(s, "car", true)){
             return car(a);
         }
@@ -275,7 +279,7 @@ codegen apply(codegen fn_exp, codegen a, codegen *env){
     } else {
         s_exp_code *fn = fn_exp.ptr;
         codegen c = car(fn_exp);
-        if (!is_atom(c)) { print("[APPLY error] no atomic expression in sub-expression"); return (codegen){}; }
+        if (!is_atom(c)) { print("[APPLY error] no atomic expression in sub-expression"); imaginal_print(a); return (codegen){}; }
         string_slice s = car_id(c);
         imaginal_debug(trace,"[APPLY trace] Non-atomic expression %v",s);
         if (!s.length) return (codegen){};

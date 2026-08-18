@@ -2,7 +2,7 @@
 #include "parser.h"
 #include "ast.h"
 
-parser_sm parser_stack[MAX_DEPTH];
+chunk_array_t *parser_stack;
 int parser_depth;
 
 chunk_array_t *tree_stack;
@@ -65,15 +65,16 @@ uint32_t tok_pos = 0;
 tok_fail furthest_fail = {};
 tok_fail latest_fail = {};
 
+static inline void create_parse_stack(){
+    if (!parser_stack) parser_stack = chunk_array_create(sizeof(parser_sm),64);
+}
+
 bool parser_advance_to_token(parser_sm *parser, Token t){
     while (current_parser_rule(parser).rule){
         parser_debug("%s[%i] %s[o:%i] subrule %s @%i",curr_indent, parser->sequence, rule_names[parser->current_rule], parser->option, rule_names[current_parser_rule(parser).value],parser->scan->pos);
-        if (parser_depth == MAX_DEPTH - 1){
-            parser_debug("Maximum depth reached, too many nested statements, shame on you");
-            return false;
-        }
+        create_parse_stack();
         // parser_debug("Push state with pos %i",tok_pos);
-        parser_stack[parser_depth++] = *parser;
+        parser_depth = chunk_array_push(parser_stack, parser) + 1;
         parser->scanner_pos = tok_pos;
         parser->tree_pos = tree_count(tree_stack);
         parser->current_rule = current_parser_rule(parser).value;
@@ -91,7 +92,8 @@ bool pop_parser_stack(parser_sm *parser, bool backtrack){
         return false;
     }
     // parser_debug("Pop state");
-    *parser = parser_stack[parser_depth-1];
+    memcpy(parser, chunk_array_get(parser_stack, parser_depth-1), sizeof(parser_sm));
+    parser_depth -= chunk_array_remove(parser_stack, 1);
     if (backtrack){
         parser_debug("%sSubrule failed, backtrack to %i",curr_indent, parser->scanner_pos);
         if (parser->scan->pos > furthest_pos) furthest_pos = tok_pos;
@@ -99,7 +101,6 @@ bool pop_parser_stack(parser_sm *parser, bool backtrack){
         tok_pos = parser->scanner_pos;
         tree_reset(tree_stack, parser->tree_pos);
     }
-    parser_depth--;
     return true;
 }
 
